@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎨 RGB Gradient Creator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-title">
+        <h1>🎨 RGB Gradient Creator</h1>
+        <p>Vytvářejte krásné barevné gradienty</p>
+    </div>
+    <div class="circle" id="gradient-circle" style="background: linear-gradient(135deg, {{ colors|join(', ') }});"></div>
+
+    <div class="color-form">
+        <h3>Vytvoř gradient</h3>
+        <form method="POST">
+            <label for="color1">Barva 1:</label>
+            <input type="text" id="color1" name="color1" value="{{ colors[0] if colors else '#FF0000' }}" placeholder="#FF0000" class="{{ 'error' if errors and 'color1' in errors else '' }}">
+            {% if errors and 'color1' in errors %}
+            <div class="error-message">{{ errors['color1'] }}</div>
+            {% endif %}<br>
+
+            <label for="color2">Barva 2:</label>
+            <input type="text" id="color2" name="color2" value="{{ colors[1] if colors and colors|length > 1 else '#008000' }}" placeholder="#008000" class="{{ 'error' if errors and 'color2' in errors else '' }}">
+            {% if errors and 'color2' in errors %}
+            <div class="error-message">{{ errors['color2'] }}</div>
+            {% endif %}<br>
+
+            <label for="color3">Barva 3:</label>
+            <input type="text" id="color3" name="color3" value="{{ colors[2] if colors and colors|length > 2 else '#0000FF' }}" placeholder="#0000FF" class="{{ 'error' if errors and 'color3' in errors else '' }}">
+            {% if errors and 'color3' in errors %}
+            <div class="error-message">{{ errors['color3'] }}</div>
+            {% endif %}<br>
+
+            <button type="submit">Vytvoř gradient</button>
+        </form>
+
+        <div class="color-palette">
+            <h4>Paleta barev</h4>
+            <div class="color-selection">
+                <label>Vybrat pro pole:</label>
+                <select id="targetField">
+                    <option value="color1">Barva 1</option>
+                    <option value="color2">Barva 2</option>
+                    <option value="color3">Barva 3</option>
+                </select>
+                <button onclick="clearSelectedColor()" class="clear-color-btn">Vymazat</button>
+            </div>
+            <div class="color-grid">
+                {% for color in color_list %}
+                <div class="color-item" style="background-color: {{ color.hex }};" onclick="selectColor('{{ color.hex }}')" title="{{ color.name }}">
+                    <span class="color-name">{{ color.name }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="color-history">
+        <div class="history-header">
+            <h3>Historie</h3>
+            <button onclick="clearHistory()" class="clear-btn">Vymazat historii</button>
+        </div>
+        {% for item in history %}
+        <div class="history-item">
+            <div class="swatch" style="background: linear-gradient(135deg, {{ item|join(', ') }});"></div>
+            <span>{{ item|join(' → ') }}</span>
+            <button onclick="loadGradient({{ loop.index0 }})">Načíst</button>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        // Color palette data (will be populated from server)
+        const colorPalette = {{ color_list|tojson }};
+
+        function loadGradient(index) {
+            // This would need to be implemented to load from history
+            // For now, we'll reload the page with the selected gradient
+            window.location.href = '/load/' + index;
+        }
+
+        function clearHistory() {
+            if (confirm('Opravdu chcete vymazat celou historii?')) {
+                window.location.href = '/clear_history';
+            }
+        }
+
+        function selectColor(color) {
+            const targetField = document.getElementById('targetField').value;
+            const input = document.getElementById(targetField);
+            input.value = color;
+        }
+
+        function clearSelectedColor() {
+            const targetField = document.getElementById('targetField').value;
+            const input = document.getElementById(targetField);
+            input.value = '';
+        }
+
+        function validateColorInput(input) {
+            const value = input.value.trim();
+            if (value === '') return true; // Empty is allowed
+
+            // Check hex format (case insensitive)
+            const hexRegex = /^#[0-9A-Fa-f]{6}$/;
+            if (hexRegex.test(value)) {
+                // Normalize to uppercase
+                input.value = value.toUpperCase();
+                return true;
+            }
+
+            // Check if it's a color name (case insensitive)
+            const upperValue = value.toUpperCase();
+            for (const color of colorPalette) {
+                if (color.name.toUpperCase() === upperValue) {
+                    // Auto-convert to hex
+                    input.value = color.hex;
+                    return true;
+                }
+            }
+
+            // If it starts with # but has wrong format, provide specific error
+            if (value.startsWith('#')) {
+                if (value.length !== 7) {
+                    return false; // Wrong length
+                } else {
+                    return false; // Invalid characters
+                }
+            }
+
+            return false; // Not a valid color
+        }
+
+        // Add validation on input change
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = ['color1', 'color2', 'color3'];
+            inputs.forEach(id => {
+                const input = document.getElementById(id);
+                input.addEventListener('blur', function() {
+                    if (!validateColorInput(this)) {
+                        this.classList.add('error');
+                    } else {
+                        this.classList.remove('error');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
